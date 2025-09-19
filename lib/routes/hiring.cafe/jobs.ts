@@ -2,10 +2,7 @@ import ofetch from '@/utils/ofetch';
 import path from 'node:path';
 import { art } from '@/utils/render';
 import { Context } from 'hono';
-import { getCurrentPath } from '@/utils/helpers';
 import { Route } from '@/types';
-
-const __dirname = getCurrentPath(import.meta.url);
 
 const CONFIG = {
     DEFAULT_PAGE_SIZE: 20,
@@ -59,6 +56,7 @@ interface SearchParams {
     readonly keywords: string;
     readonly page?: number;
     readonly size?: number;
+    readonly sortBy?: 'date' | 'default' | 'compensation_desc' | 'experience_asc';
 }
 
 const validateSearchParams = ({ keywords, page = 0, size = CONFIG.DEFAULT_PAGE_SIZE }: SearchParams): SearchParams => ({
@@ -69,10 +67,11 @@ const validateSearchParams = ({ keywords, page = 0, size = CONFIG.DEFAULT_PAGE_S
 
 const fetchJobs = async (searchParams: SearchParams): Promise<ApiResponse> => {
     const payload = {
-        size: searchParams.size,
-        page: searchParams.page,
+        size: searchParams.size || 20,
+        page: searchParams.page || 0,
         searchState: {
             searchQuery: searchParams.keywords,
+            sortBy: searchParams.sortBy || 'date',
         },
     };
 

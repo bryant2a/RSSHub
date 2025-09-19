@@ -1,6 +1,9 @@
 import { Route, ViewType } from '@/types';
 import got from '@/utils/got';
-import utils from './utils';
+import utils, { getVideoUrl } from './utils';
+import { parseDuration } from '@/utils/helpers';
+import { config } from '@/config';
+import cache from './cache';
 
 // https://www.bilibili.com/v/popular/rank/all
 
@@ -117,7 +120,7 @@ export const route: Route = {
     path: '/ranking/:rid_index?/:embed?/:redirect1?/:redirect2?',
     name: '排行榜',
     maintainers: ['DIYgod', 'hyoban'],
-    categories: ['social-media', 'popular'],
+    categories: ['social-media'],
     view: ViewType.Videos,
     example: '/bilibili/ranking/0',
     parameters: {
@@ -187,7 +190,7 @@ async function handler(ctx) {
         // redirect old routes like /bilibili/ranking/0/3/1 or /bilibili/ranking/0/3/1/xxx
         const embedArg = args.redirect2 ? '/' + args.redirect2 : '';
         ctx.set('redirect', `/bilibili/ranking/${getRidIndexByRid(args.rid_index)}${embedArg}`);
-        return;
+        return null;
     }
 
     const ridIndex = ctx.req.param('rid_index') || '0';
@@ -211,12 +214,26 @@ async function handler(ctx) {
     return {
         title: `bilibili 排行榜-${ridChinese}`,
         link,
-        item: list.map((item) => ({
-            title: item.title,
-            description: utils.renderUGCDescription(embed, item.pic, item.description || item.title, item.aid, undefined, item.bvid),
-            pubDate: item.create && new Date(item.create).toUTCString(),
-            author: item.author,
-            link: !item.create || (new Date(item.create) / 1000 > utils.bvidTime && item.bvid) ? `https://www.bilibili.com/video/${item.bvid}` : `https://www.bilibili.com/video/av${item.aid}`,
-        })),
+        item: list.map(async (item) => {
+            const subtitles = !config.bilibili.excludeSubtitles && item.bvid ? await cache.getVideoSubtitleAttachment(item.bvid) : [];
+            return {
+                title: item.title,
+                description: utils.renderUGCDescription(embed, item.pic, item.description || item.title, item.aid, undefined, item.bvid),
+                pubDate: item.create && new Date(item.create).toUTCString(),
+                author: item.author,
+                link: !item.create || (new Date(item.create).getTime() / 1000 > utils.bvidTime && item.bvid) ? `https://www.bilibili.com/video/${item.bvid}` : `https://www.bilibili.com/video/av${item.aid}`,
+                image: item.pic,
+                attachments: item.bvid
+                    ? [
+                          {
+                              url: getVideoUrl(item.bvid),
+                              mime_type: 'text/html',
+                              duration_in_seconds: parseDuration(item.duration),
+                          },
+                          ...subtitles,
+                      ]
+                    : undefined,
+            };
+        }),
     };
 }

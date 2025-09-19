@@ -1,6 +1,3 @@
-import { getCurrentPath } from '@/utils/helpers';
-const __dirname = getCurrentPath(import.meta.url);
-
 import got from '@/utils/got';
 import { load } from 'cheerio';
 import { parseDate } from '@/utils/parse-date';
@@ -87,9 +84,9 @@ const parseItem = (item, tryGet) =>
 
         const ldJson = JSON.parse($('script[type="application/ld+json"]').first().text());
         const author = `${$('span.caas-author-byline-collapse').text()} @${$('span.caas-attr-provider').text()}`;
-        const body = $('.caas-body');
+        const body = $('.atoms');
 
-        body.find('noscript').remove();
+        body.find('noscript, .text-gandalf, [id^="sda-inbody-"]').remove();
         // remove padding
         body.find('.caas-figure-with-pb, .caas-img-container').each((_, ele) => {
             const $ele = $(ele);
